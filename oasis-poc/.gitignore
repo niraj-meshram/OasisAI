@@ -1,0 +1,33 @@
+# Root env and logs
+.env
+*.log
+*.tmp
+*.bak
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/.eslintcache
+
+# Backend
+backend/.env
+backend/.venv/
+backend/__pycache__/
+backend/.pytest_cache/
+backend/.coverage
+backend/.mypy_cache/
+backend/.ruff_cache/
+backend/.ipynb_checkpoints/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
