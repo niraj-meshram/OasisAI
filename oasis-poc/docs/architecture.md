@@ -6,7 +6,7 @@
   - **Settings** (`app/core/config.py`): env-driven; `MOCK_MODE` defaults true; `ALLOWED_ORIGINS` parsed from `*`, comma list, or JSON; `APP_API_KEY` optional.
   - **Auth** (`app/core/auth.py`): optional API key via `x-api-key`; skipped if unset.
   - **Data policy** (`app/core/data_policy.py`): keyword guardrail rejecting obvious non-public/PII inputs.
-  - **LLM adapter** (`app/services/llm_adapter.py`): mock mode returns canned response; live mode uses OpenAI Chat Completions (JSON mode) with API key from env only.
+  - **LLM adapter** (`app/services/llm_adapter.py`): mock mode returns canned response; live mode uses a pluggable provider registry (default OpenAI Chat Completions JSON mode) with API key from env only.
   - **Prompting** (`app/services/prompt_engine.py`): structured system/user prompts driving LLM responses.
 - **Observability** — Trace ID per request (UUID) surfaced in responses; logging avoids payload content.
 

@@ -12,6 +12,7 @@ type AuthContext = {
   isLoading: boolean;
   userName?: string;
   login: () => void;
+  signUp?: () => void;
   logout?: () => void;
   authDisabled?: boolean;
 };
@@ -25,9 +26,21 @@ function AppShell({ auth }: AppShellProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('auto');
+  const [llmModel, setLlmModel] = useState<string>('gpt-4o-mini');
   const [hasStarted, setHasStarted] = useState(false);
+  const openAiModels = [
+    'gpt-5',
+    'gpt-5-mini',
+    'gpt-5.1',
+    'gpt-5.1-mini',
+    'gpt-4o',
+    'gpt-4o-mini',
+    'gpt-4.1',
+    'gpt-4.1-mini',
+    'gpt-3.5-turbo',
+  ];
 
-  const { isAuthenticated, isLoading, login, logout, userName, authDisabled } = auth;
+  const { isAuthenticated, isLoading, login, signUp, logout, userName, authDisabled } = auth;
   const displayName = userName || 'User';
 
   useEffect(() => {
@@ -55,7 +68,7 @@ function AppShell({ auth }: AppShellProps) {
     setError(null);
     setResult(null);
     try {
-      const res = await analyzeRisk(payload, mode);
+      const res = await analyzeRisk(payload, mode, mode === 'live' ? llmModel : undefined);
       setResult(res);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Request failed');
@@ -77,7 +90,7 @@ function AppShell({ auth }: AppShellProps) {
   }
 
   const handleHeaderStart = () => startOrLogin();
-  const handleBodyStart = () => setHasStarted(true);
+  const handleBodyStart = () => startOrLogin();
 
   const handleLogout = () => {
     setHasStarted(false);
@@ -92,6 +105,11 @@ function AppShell({ auth }: AppShellProps) {
         onHeaderStart={handleHeaderStart}
         onBodyStart={handleBodyStart}
         onLogin={isAuthenticated || authDisabled ? handleHeaderStart : () => login()}
+        onSignup={
+          isAuthenticated || authDisabled
+            ? undefined
+            : () => (signUp ? signUp() : login())
+        }
         onLogout={isAuthenticated && !authDisabled ? handleLogout : undefined}
         isAuthenticated={isAuthenticated || authDisabled}
         userName={isAuthenticated || authDisabled ? displayName : undefined}
@@ -135,6 +153,26 @@ function AppShell({ auth }: AppShellProps) {
             Auto (backend default)
           </button>
         </div>
+        {mode === 'live' && (
+          <div style={{ marginTop: 12 }}>
+            <label htmlFor="llmModel">
+              <strong style={{ marginRight: 8 }}>Model:</strong>
+            </label>
+            <select
+              id="llmModel"
+              value={llmModel}
+              onChange={(e) => setLlmModel(e.target.value)}
+              disabled={loading}
+              style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}
+            >
+              {openAiModels.map((model) => (
+                <option key={model} value={model}>
+                  {model}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <p className="muted" style={{ marginTop: 8, marginBottom: 0 }}>
           Mock uses canned responses; Live calls the configured LLM; Auto defers to backend setting.
         </p>
@@ -154,11 +192,21 @@ function AppShell({ auth }: AppShellProps) {
 function AppWithAuth0() {
   const { isAuthenticated, isLoading, loginWithRedirect, logout, user } = useAuth0();
   const logoutReturnTo = import.meta.env.VITE_AUTH0_LOGOUT_URI || window.location.origin;
+  const connection = import.meta.env.VITE_AUTH0_CONNECTION;
+  const loginParams = connection ? { authorizationParams: { connection } } : undefined;
   const auth: AuthContext = {
     isAuthenticated,
     isLoading,
     userName: user?.name || user?.email || 'User',
-    login: () => loginWithRedirect(),
+    login: () => loginWithRedirect(loginParams),
+    signUp: () =>
+      loginWithRedirect({
+        authorizationParams: {
+          ...(connection ? { connection } : {}),
+          screen_hint: 'signup',
+          prompt: 'login',
+        },
+      }),
     logout: () => logout({ logoutParams: { returnTo: logoutReturnTo } }),
   };
   return <AppShell auth={auth} />;
@@ -170,6 +218,7 @@ function AppNoAuth() {
     isLoading: false,
     userName: 'Demo user',
     login: () => {},
+    signUp: () => {},
     logout: undefined,
     authDisabled: true,
   };

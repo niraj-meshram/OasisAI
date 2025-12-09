@@ -2,12 +2,13 @@ type Props = {
   onHeaderStart: () => void;
   onBodyStart: () => void;
   onLogin?: () => void;
+  onSignup?: () => void;
   onLogout?: () => void;
   isAuthenticated?: boolean;
   userName?: string;
 };
 
-function Landing({ onHeaderStart, onBodyStart, onLogin, onLogout, isAuthenticated, userName }: Props) {
+function Landing({ onHeaderStart, onBodyStart, onLogin, onSignup, onLogout, isAuthenticated, userName }: Props) {
   return (
     <div className="landing">
       <div className="bg-layer sky" />
@@ -47,9 +48,14 @@ function Landing({ onHeaderStart, onBodyStart, onLogin, onLogout, isAuthenticate
                   Log out
                 </button>
               ) : (
-                <button className="rw-cta ghost" type="button" onClick={onLogin || onHeaderStart}>
-                  Log in
-                </button>
+                <>
+                  <button className="rw-cta ghost" type="button" onClick={onLogin || onHeaderStart}>
+                    Log in
+                  </button>
+                  <button className="rw-cta ghost" type="button" onClick={onSignup || onHeaderStart}>
+                    Sign up
+                  </button>
+                </>
               )}
               <button className="rw-cta solid" type="button" onClick={onHeaderStart}>
                 Get started

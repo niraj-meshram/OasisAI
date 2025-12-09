@@ -32,6 +32,8 @@ a {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .grid {
@@ -121,6 +123,17 @@ a {
   border: 1px solid #e5e7eb;
   padding: 8px;
   text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.risks-table ul {
+  margin: 0;
+  padding-left: 16px;
+}
+.risks-table li {
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .eval-table {
@@ -133,6 +146,9 @@ a {
   border: 1px solid #e5e7eb;
   padding: 8px;
   text-align: left;
+  vertical-align: top;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .narrative {
