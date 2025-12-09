@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from typing import Protocol
 from uuid import uuid4
 
 from app.api.v1.schemas import RiskItem, RiskRequest, RiskResponse
@@ -13,6 +14,14 @@ try:
     from openai import OpenAI  # type: ignore
 except Exception:  # pragma: no cover - dependency not installed in mock mode
     OpenAI = None
+
+
+class LLMProvider(Protocol):
+    name: str
+
+    def generate(
+        self, request: RiskRequest, settings: Settings, trace_id: str, model_override: str | None = None
+    ) -> RiskResponse: ...
 
 
 def _get_env_var(name: str) -> str | None:
@@ -127,13 +136,29 @@ def _parse_llm_json(content: str, trace_id: str) -> RiskResponse:
     if missing:
         raise RuntimeError(f"LLM response missing required fields: {', '.join(missing)}")
 
+    # Normalize common model quirks (e.g., numeric risk_id returned as int).
+    if isinstance(data.get("risks"), list):
+        normalized_risks = []
+        for idx, risk in enumerate(data["risks"], start=1):
+            if not isinstance(risk, dict):
+                raise RuntimeError("LLM response risks must be objects.")
+            risk_copy = dict(risk)
+            if "risk_id" in risk_copy and not isinstance(risk_copy["risk_id"], str):
+                risk_copy["risk_id"] = str(risk_copy["risk_id"])
+            if "risk_id" not in risk_copy:
+                risk_copy["risk_id"] = f"R{idx}"
+            normalized_risks.append(risk_copy)
+        data["risks"] = normalized_risks
+
     try:
         return RiskResponse(trace_id=trace_id, **data)
     except Exception as exc:  # pragma: no cover - defensive against malformed model
         raise RuntimeError(f"LLM response did not match schema: {exc}") from exc
 
 
-def run_llm(request: RiskRequest, settings: Settings, force_mock: bool | None = None) -> RiskResponse:
+def run_llm(
+    request: RiskRequest, settings: Settings, force_mock: bool | None = None, llm_model_override: str | None = None
+) -> RiskResponse:
     """
     force_mock: True forces mock response; False forces live; None uses settings.mock_mode.
     """
@@ -146,40 +171,83 @@ def run_llm(request: RiskRequest, settings: Settings, force_mock: bool | None = 
         logger.info("risk.run_llm responding_with=MOCK trace_id=%s", trace_id)
         return _mock_response(trace_id)
 
-    if OpenAI is None:
-        logger.error("risk.run_llm live_call_failed reason=openai_missing trace_id=%s", trace_id)
-        raise RuntimeError("openai package not available; enable mock_mode or install dependency.")
+    provider = _get_provider(settings.llm_provider)
+    return provider.generate(request=request, settings=settings, trace_id=trace_id, model_override=llm_model_override)
 
-    api_key = settings.openai_api_key.strip() if settings.openai_api_key else None
-    if not api_key:
-        api_key = _get_env_var("OPENAI_API_KEY")
-    if not api_key:
-        logger.error("risk.run_llm live_call_failed reason=missing_openai_api_key trace_id=%s", trace_id)
-        raise RuntimeError("OPENAI_API_KEY is not set in the environment.")
 
-    system_prompt = SYSTEM_PROMPT
-    user_prompt = build_user_prompt(request)
-    client = OpenAI(api_key=api_key)
-    logger.info(
-        "risk.run_llm responding_with=LIVE provider=%s model=%s trace_id=%s",
-        settings.llm_provider,
-        settings.llm_model,
-        trace_id,
-    )
-    try:
-        completion = client.chat.completions.create(
-            model=settings.llm_model,
-            messages=[
+class OpenAIProvider:
+    name = "openai"
+
+    def __init__(self) -> None:
+        self._client_cls = OpenAI
+
+    def generate(
+        self, request: RiskRequest, settings: Settings, trace_id: str, model_override: str | None = None
+    ) -> RiskResponse:
+        if self._client_cls is None:
+            logger.error("risk.run_llm live_call_failed reason=openai_missing trace_id=%s", trace_id)
+            raise RuntimeError("openai package not available; enable mock_mode or install dependency.")
+
+        api_key = settings.openai_api_key.strip() if settings.openai_api_key else None
+        if not api_key:
+            api_key = _get_env_var("OPENAI_API_KEY")
+        if not api_key:
+            logger.error("risk.run_llm live_call_failed reason=missing_openai_api_key trace_id=%s", trace_id)
+            raise RuntimeError("OPENAI_API_KEY is not set in the environment.")
+
+        model = (model_override or settings.llm_model or "").strip()
+        if not model:
+            raise RuntimeError("LLM model is not configured.")
+
+        system_prompt = SYSTEM_PROMPT
+        user_prompt = build_user_prompt(request)
+        client = self._client_cls(api_key=api_key)
+        logger.info(
+            "risk.run_llm responding_with=LIVE provider=%s model=%s trace_id=%s",
+            settings.llm_provider,
+            model,
+            trace_id,
+        )
+        is_gpt5_family = model.lower().startswith("gpt-5")
+        temperature_param = {} if is_gpt5_family else {"temperature": 0.2}
+        base_params = {
+            "model": model,
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            response_format={"type": "json_object"},
-            temperature=0.2,
-            max_tokens=800,
-        )
-    except Exception as exc:  # pragma: no cover - defensive logging for live failures
-        logger.exception("risk.run_llm live_call_failed trace_id=%s", trace_id)
-        raise
-    content = completion.choices[0].message.content or "{}"
-    response = _parse_llm_json(content, trace_id)
-    return response
+            "response_format": {"type": "json_object"},
+            **temperature_param,
+        }
+        if is_gpt5_family:
+            token_param_options = [{}, {"max_tokens": 800}]
+        else:
+            token_param_options = [{"max_tokens": 800}, {}]
+
+        last_exc: Exception | None = None
+        for token_params in token_param_options:
+            try:
+                completion = client.chat.completions.create(**base_params, **token_params)
+                break
+            except Exception as exc:  # pragma: no cover - defensive logging for live failures
+                message = str(exc).lower()
+                if "unsupported_parameter" in message and "max_tokens" in message:
+                    last_exc = exc
+                    continue
+                logger.exception("risk.run_llm live_call_failed trace_id=%s", trace_id)
+                raise
+        else:
+            logger.exception("risk.run_llm live_call_failed trace_id=%s", trace_id, exc_info=last_exc)
+            raise last_exc or RuntimeError("LLM call failed due to unsupported token parameter.")
+        content = completion.choices[0].message.content or "{}"
+        return _parse_llm_json(content, trace_id)
+
+
+def _get_provider(name: str) -> LLMProvider:
+    provider_key = (name or "").strip().lower()
+    providers: dict[str, LLMProvider] = {
+        "openai": OpenAIProvider(),
+    }
+    if provider_key not in providers:
+        raise RuntimeError(f"Unsupported LLM provider '{name}'. Supported providers: {', '.join(providers)}")
+    return providers[provider_key]

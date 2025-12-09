@@ -11,6 +11,8 @@ export interface RiskRequest {
   constraints?: string;
   requested_outputs?: string;
   refinements?: string;
+  control_tokens?: string[];
+  instruction_tuning?: string;
 }
 
 export interface RiskItem {
@@ -41,7 +43,7 @@ const APP_API_KEY = import.meta.env.VITE_APP_API_KEY;
 
 export type Mode = 'auto' | 'mock' | 'live';
 
-export async function analyzeRisk(payload: RiskRequest, mode: Mode = 'auto'): Promise<RiskResponse> {
+export async function analyzeRisk(payload: RiskRequest, mode: Mode = 'auto', llmModel?: string): Promise<RiskResponse> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -50,7 +52,12 @@ export async function analyzeRisk(payload: RiskRequest, mode: Mode = 'auto'): Pr
     headers['x-api-key'] = APP_API_KEY;
   }
 
-  const res = await fetch(`${API_BASE}/risk/analyze?mode=${mode}`, {
+  const params = new URLSearchParams({ mode });
+  if (mode === 'live' && llmModel) {
+    params.append('llm_model', llmModel);
+  }
+
+  const res = await fetch(`${API_BASE}/risk/analyze?${params.toString()}`, {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),

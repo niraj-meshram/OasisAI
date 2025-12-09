@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 async def analyze_risk(
     payload: RiskRequest,
     mode: str = Query("auto", enum=["auto", "mock", "live"]),
+    llm_model: str | None = Query(
+        default=None,
+        description="Optional LLM model override (only used in live mode).",
+        examples=["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini"],
+    ),
     settings: Settings = Depends(get_settings),
 ) -> RiskResponse:
     """
@@ -49,6 +54,8 @@ async def analyze_risk(
             payload.constraints,
             payload.requested_outputs,
             payload.refinements,
+            " ".join(payload.control_tokens) if payload.control_tokens else None,
+            payload.instruction_tuning,
         ]
     )
     if policy_hits:
@@ -62,7 +69,7 @@ async def analyze_risk(
         )
 
     try:
-        return run_llm(payload, settings, force_mock=force_mock)
+        return run_llm(payload, settings, force_mock=force_mock, llm_model_override=llm_model if mode == "live" else None)
     except Exception as exc:
         logger.exception(
             "risk.analyze failed mode_param=%s settings.mock_mode=%s resolved_mode=%s",

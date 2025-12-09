@@ -17,6 +17,8 @@ const defaultForm: RiskRequest = {
   constraints: 'No confidential data, public sources only',
   requested_outputs: 'Narrative + register + mitigations + KPIs',
   refinements: '',
+  control_tokens: ['tone=regulatory', 'length=concise'],
+  instruction_tuning: 'Use public frameworks only; keep sentences short; avoid speculative claims.',
 };
 
 const presets: Record<string, RiskRequest> = {
@@ -31,6 +33,8 @@ const presets: Record<string, RiskRequest> = {
     constraints: 'Public data only; no customer PII; use public regs',
     requested_outputs: 'Narrative + register + mitigations + KPIs',
     refinements: 'Emphasize KYC/AML expectations',
+    control_tokens: ['tone=regulatory', 'length=concise'],
+    instruction_tuning: 'Highlight operational resilience and KYC controls.',
   },
   'Cloud migration (compliance workload)': {
     business_type: 'Financial services',
@@ -43,6 +47,8 @@ const presets: Record<string, RiskRequest> = {
     constraints: 'No proprietary data; reference public standards (e.g., ISO, NIST)',
     requested_outputs: 'Controls, mitigations, KPIs for residency and access',
     refinements: 'Highlight data residency and change control',
+    control_tokens: ['tone=assurance', 'length=concise', 'format=numbered'],
+    instruction_tuning: 'Emphasize residency, access control, and change management.',
   },
   'Fintech fraud monitoring integration': {
     business_type: 'Payments/Fintech',
@@ -55,13 +61,15 @@ const presets: Record<string, RiskRequest> = {
     constraints: 'No customer data; rely on public patterns and controls',
     requested_outputs: 'Narrative + register + mitigations + KPIs',
     refinements: 'Cover SLA risks and model drift monitoring',
+    control_tokens: ['tone=practical', 'length=concise'],
+    instruction_tuning: 'Call out third-party SLAs and model drift monitoring.',
   },
 };
 
 function AssessmentWizard({ onSubmit, loading }: Props) {
   const [form, setForm] = useState<RiskRequest>(defaultForm);
 
-  const handleChange = (key: keyof RiskRequest, value: string) => {
+  const handleChange = (key: keyof RiskRequest, value: string | string[]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -148,11 +156,40 @@ function AssessmentWizard({ onSubmit, loading }: Props) {
         />
       </div>
       <div className="field">
+        <label htmlFor="control_tokens">Control Tokens (comma-separated)</label>
+        <input
+          id="control_tokens"
+          value={(form.control_tokens || []).join(', ')}
+          onChange={(e) =>
+            handleChange(
+              'control_tokens',
+              e.target.value
+                .split(',')
+                .map((token) => token.trim())
+                .filter(Boolean),
+            )
+          }
+          placeholder="tone=regulatory, length=concise, format=numbered"
+        />
+        <p className="muted" style={{ margin: 0 }}>
+          Optional steering tokens (tone, length, format, focus). Leave blank for defaults.
+        </p>
+      </div>
+      <div className="field">
         <label htmlFor="requested_outputs">Requested Outputs</label>
         <input
           id="requested_outputs"
           value={form.requested_outputs ?? ''}
           onChange={(e) => handleChange('requested_outputs', e.target.value)}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="instruction_tuning">Instruction Tuning</label>
+        <textarea
+          id="instruction_tuning"
+          value={form.instruction_tuning ?? ''}
+          onChange={(e) => handleChange('instruction_tuning', e.target.value)}
+          placeholder="Add extra steering such as tone guidance or constraints."
         />
       </div>
       <div className="field">

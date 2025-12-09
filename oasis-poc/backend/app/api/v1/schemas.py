@@ -17,6 +17,16 @@ class RiskRequest(BaseModel):
     constraints: Optional[str] = Field(default=None, example="Avoid storing PII")
     requested_outputs: Optional[str] = Field(default=None, example="Narrative + register + mitigations")
     refinements: Optional[str] = Field(default=None, example="Emphasize regulatory expectations")
+    control_tokens: List[str] = Field(
+        default_factory=list,
+        example=["tone=regulatory", "length=concise", "format=numbered"],
+        description="Optional control tokens to steer the response (e.g., tone=regulatory, length=concise).",
+    )
+    instruction_tuning: Optional[str] = Field(
+        default=None,
+        example="Use short sentences, cite public frameworks, avoid speculative claims.",
+        description="Additional steering instructions or constraints to guide the model output.",
+    )
 
 
 class RiskItem(BaseModel):
