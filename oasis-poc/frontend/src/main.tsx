@@ -10,7 +10,10 @@ const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 const redirectUri = import.meta.env.VITE_AUTH0_REDIRECT_URI || window.location.origin;
 const authDisabledFlag = import.meta.env.VITE_AUTH_DISABLED === 'true';
 
-const root = document.getElementById('root') as HTMLElement;
+const root = document.getElementById('root');
+if (!root) {
+  throw new Error('Root element #root not found');
+}
 const missingConfig = !domain || !clientId;
 const useAuth0 = !authDisabledFlag && !missingConfig;
 

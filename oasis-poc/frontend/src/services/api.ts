@@ -64,11 +64,21 @@ export async function analyzeRisk(payload: RiskRequest, mode: Mode = 'auto', llm
   });
 
   if (!res.ok) {
-    const body = await res.text();
+    const rawBody = await res.text();
+    let bodyMessage = rawBody;
+    try {
+      const parsed = JSON.parse(rawBody) as { detail?: string };
+      if (parsed && typeof parsed === 'object' && typeof parsed.detail === 'string') {
+        bodyMessage = parsed.detail;
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
     const message =
       res.status === 401
-        ? body || 'Unauthorized: API key missing or invalid. Set VITE_APP_API_KEY to match backend APP_API_KEY.'
-        : body || `Request failed with status ${res.status}`;
+        ? bodyMessage ||
+          'Unauthorized: API key missing or invalid. Set VITE_APP_API_KEY to match backend APP_API_KEY.'
+        : bodyMessage || `Request failed with status ${res.status}`;
     throw new Error(message);
   }
 

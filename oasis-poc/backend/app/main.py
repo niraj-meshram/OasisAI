@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,10 +11,17 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.project_name, version="0.1.0")
 
+    allow_credentials = "*" not in settings.allowed_origins
+    if not allow_credentials and settings.allowed_origins != ["*"]:
+        logging.getLogger(__name__).warning(
+            "CORS allow_credentials disabled because wildcard origin present: %s",
+            settings.allowed_origins,
+        )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
-        allow_credentials=True,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )
