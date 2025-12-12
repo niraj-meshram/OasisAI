@@ -12,8 +12,8 @@ class Settings(BaseSettings):
     mock_mode: bool = True
     llm_provider: str = "openai"
     llm_model: str = "gpt-4o-mini"
-    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    app_api_key: Optional[str] = Field(default=None, env="APP_API_KEY")
+    openai_api_key: Optional[str] = Field(default=None, validation_alias="OPENAI_API_KEY")
+    app_api_key: Optional[str] = Field(default=None, validation_alias="APP_API_KEY")
     allowed_origins: list[str] = Field(default_factory=lambda: ["*"])
 
     @field_validator("app_api_key", "openai_api_key", mode="before")

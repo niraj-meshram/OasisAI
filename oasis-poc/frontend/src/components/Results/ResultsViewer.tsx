@@ -89,6 +89,8 @@ function ResultsViewer({ result, loading }: Props) {
               <tr>
                 <th>ID</th>
                 <th>Title</th>
+                <th>Cause</th>
+                <th>Impact</th>
                 <th>Likelihood</th>
                 <th>Inherent</th>
                 <th>Residual</th>
@@ -102,6 +104,8 @@ function ResultsViewer({ result, loading }: Props) {
                 <tr key={risk.risk_id}>
                   <td>{risk.risk_id}</td>
                   <td>{risk.risk_title}</td>
+                  <td>{risk.cause}</td>
+                  <td>{risk.impact}</td>
                   <td>{risk.likelihood}</td>
                   <td>{risk.inherent_rating}</td>
                   <td>{risk.residual_rating}</td>

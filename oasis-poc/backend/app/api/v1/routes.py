@@ -1,4 +1,5 @@
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -13,9 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 @router.post("/analyze", response_model=RiskResponse, dependencies=[Depends(verify_api_key)])
-async def analyze_risk(
+def analyze_risk(
     payload: RiskRequest,
-    mode: str = Query("auto", enum=["auto", "mock", "live"]),
+    mode: Literal["auto", "mock", "live"] = Query("auto"),
     llm_model: str | None = Query(
         default=None,
         description="Optional LLM model override (only used in live mode).",
@@ -69,7 +70,12 @@ async def analyze_risk(
         )
 
     try:
-        return run_llm(payload, settings, force_mock=force_mock, llm_model_override=llm_model if mode == "live" else None)
+        return run_llm(
+            payload,
+            settings,
+            force_mock=force_mock,
+            llm_model_override=llm_model if mode == "live" else None,
+        )
     except Exception as exc:
         logger.exception(
             "risk.analyze failed mode_param=%s settings.mock_mode=%s resolved_mode=%s",
@@ -79,5 +85,5 @@ async def analyze_risk(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(exc),
+            detail="Risk analysis failed. Check backend logs for details.",
         ) from exc

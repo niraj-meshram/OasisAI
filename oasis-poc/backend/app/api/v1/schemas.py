@@ -7,31 +7,37 @@ Likelihood = Literal["Low", "Medium", "High"]
 
 
 class RiskRequest(BaseModel):
-    business_type: str = Field(..., example="Retail banking")
-    risk_domain: str = Field(..., example="Operational")
-    region: Optional[str] = Field(default=None, example="North America")
-    size: Optional[str] = Field(default=None, example="Mid")
-    maturity: Optional[str] = Field(default=None, example="Defined")
-    objectives: Optional[str] = Field(default=None, example="Create risk register")
-    context: Optional[str] = Field(default=None, example="New digital onboarding channel")
-    constraints: Optional[str] = Field(default=None, example="Avoid storing PII")
-    requested_outputs: Optional[str] = Field(default=None, example="Narrative + register + mitigations")
-    refinements: Optional[str] = Field(default=None, example="Emphasize regulatory expectations")
+    business_type: str = Field(..., json_schema_extra={"example": "Retail banking"})
+    risk_domain: str = Field(..., json_schema_extra={"example": "Operational"})
+    region: Optional[str] = Field(default=None, json_schema_extra={"example": "North America"})
+    size: Optional[str] = Field(default=None, json_schema_extra={"example": "Mid"})
+    maturity: Optional[str] = Field(default=None, json_schema_extra={"example": "Defined"})
+    objectives: Optional[str] = Field(default=None, json_schema_extra={"example": "Create risk register"})
+    context: Optional[str] = Field(default=None, json_schema_extra={"example": "New digital onboarding channel"})
+    constraints: Optional[str] = Field(default=None, json_schema_extra={"example": "Avoid storing PII"})
+    requested_outputs: Optional[str] = Field(
+        default=None, json_schema_extra={"example": "Narrative + register + mitigations"}
+    )
+    refinements: Optional[str] = Field(
+        default=None, json_schema_extra={"example": "Emphasize regulatory expectations"}
+    )
     control_tokens: List[str] = Field(
         default_factory=list,
-        example=["tone=regulatory", "length=concise", "format=numbered"],
+        json_schema_extra={"example": ["tone=regulatory", "length=concise", "format=numbered"]},
         description="Optional control tokens to steer the response (e.g., tone=regulatory, length=concise).",
     )
     instruction_tuning: Optional[str] = Field(
         default=None,
-        example="Use short sentences, cite public frameworks, avoid speculative claims.",
+        json_schema_extra={
+            "example": "Use short sentences, cite public frameworks, avoid speculative claims."
+        },
         description="Additional steering instructions or constraints to guide the model output.",
     )
 
 
 class RiskItem(BaseModel):
-    risk_id: str = Field(..., example="R1")
-    risk_title: str = Field(..., example="Third-party outage")
+    risk_id: str = Field(..., json_schema_extra={"example": "R1"})
+    risk_title: str = Field(..., json_schema_extra={"example": "Third-party outage"})
     cause: str
     impact: str
     likelihood: Likelihood
