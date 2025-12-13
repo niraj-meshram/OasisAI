@@ -8,9 +8,18 @@ from app.core.auth import verify_api_key
 from app.core.config import Settings, get_settings
 from app.core.data_policy import find_private_indicators
 from app.services.llm_adapter import run_llm
+from app.services.prompt_variants import get_system_prompt, list_prompt_variant_names
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/prompt-variants", response_model=list[str])
+def list_prompt_variants() -> list[str]:
+    """
+    Return available system prompt variant names.
+    """
+    return list_prompt_variant_names()
 
 
 @router.post("/analyze", response_model=RiskResponse, dependencies=[Depends(verify_api_key)])
@@ -21,6 +30,10 @@ def analyze_risk(
         default=None,
         description="Optional LLM model override (only used in live mode).",
         examples=["gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini"],
+    ),
+    prompt_variant: str | None = Query(
+        default=None,
+        description="Optional system prompt variant name (e.g., default, variant_a, variant_b).",
     ),
     settings: Settings = Depends(get_settings),
 ) -> RiskResponse:
@@ -70,12 +83,19 @@ def analyze_risk(
         )
 
     try:
+        try:
+            system_prompt_override = get_system_prompt(prompt_variant)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         return run_llm(
             payload,
             settings,
             force_mock=force_mock,
             llm_model_override=llm_model if mode == "live" else None,
+            system_prompt_override=system_prompt_override if prompt_variant else None,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception(
             "risk.analyze failed mode_param=%s settings.mock_mode=%s resolved_mode=%s",

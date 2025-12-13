@@ -24,3 +24,5 @@ def test_build_user_prompt_includes_all_sections():
     assert "tone=regulatory" in prompt
     assert "=== Instruction Tuning ===" in prompt
     assert "Use short sentences" in prompt
+    assert "control_mappings" in prompt
+    assert "vulnerability_summaries" in prompt

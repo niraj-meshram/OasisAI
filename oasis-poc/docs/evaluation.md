@@ -1,28 +1,65 @@
-# Evaluation & Test Matrix
+# Evaluation Framework
 
-Purpose: demonstrate the PoC produces structured, context-relevant risk content using the controlled prompt. Results below assume **mock mode** (deterministic). Rerun in **live mode** for qualitative review when `OPENAI_API_KEY` is available.
+Purpose: validate that a controlled prompt‑template + LLM can generate **structured, relevant, actionable, and safe** risk‑management content across business types. The evaluation uses only public/anonymized inputs.
 
-## Quick run commands
-- Mock: `curl -X POST "http://localhost:8000/api/v1/risk/analyze?mode=mock" -H "Content-Type: application/json" -d @payload.json`
-- Live: `OPENAI_API_KEY=... curl -X POST "http://localhost:8000/api/v1/risk/analyze?mode=live" ...`
+## 1) Success criteria (“what good looks like”)
+We track both automated gates and SME scoring:
 
-## Scenarios (covering three business contexts)
-| Scenario | Input focus | Mode | Expected outcome |
-| --- | --- | --- | --- |
-| Digital onboarding (retail banking) | Operational + regulatory (KYC), channel availability | mock/live | Narrative plus register items for onboarding outages, KYC failures, fraud; mitigations include redundancy and controls for identity proofing. |
-| Cloud migration for compliance workload | Regulatory/operational, data residency | mock/live | Risks around residency, access controls, misconfigurations; mitigations for encryption, policy mapping, change control. |
-| Fintech fraud monitoring integration | Fraud/operational, third-party | mock/live | Third-party dependency and fraud detection efficacy; mitigations for SLAs, monitoring, model drift/threshold tuning. |
+- **Schema compliance**: output is valid JSON and matches `RiskResponse` schema.
+- **Contextual relevance**: risks align to industry/region/maturity and scenario context.
+- **Risk coverage**: each risk has cause, impact, controls, mitigations, KPIs, assumptions.
+- **Usefulness/actionability**: mitigations and KPIs are implementable and specific.
+- **Consistency**: repeated runs yield stable “top risks” (low variance).
+- **Safety**: no PII/non‑public data; sensitive prompts are refused.
 
-## Acceptance criteria
-- Response is valid `RiskResponse` JSON (narrative + list of risks + assumptions_gaps).
-- Risks include titles, causes, impacts, likelihoods, inherent/residual ratings, and actionable mitigations/KPIs.
-- Content references only public/anonymized context; no proprietary data.
+## 2) Evaluation set (representative test suite)
+Scenarios live in `docs/eval_scenarios.json` (20+ cases), covering:
 
-## Observations (mock mode)
-- Deterministic mock response returned with trace ID, two sample risks, and assumptions/gaps.
-- Guardrail blocks inputs containing markers like `pii`, `ssn`, `confidential`, etc., returning HTTP 400 with guidance.
+- Business types: banking, pharma, SaaS, manufacturing, public sector, etc.
+- Regions/regulatory flavors: US, EU, APAC.
+- Sizes/maturity: startup → enterprise, emerging → managed controls.
+- Domains: cyber, operational, third‑party, privacy, fraud, regulatory.
+- Edge cases (minimal context).
+- Negative prompts designed to trigger refusal.
 
-## Next evaluation steps (live mode)
-- Compare live outputs against a checklist per scenario (accuracy, actionability, regulatory coverage).
-- Rate each risk item for relevance (1-5) and completeness (1-5); capture gaps for prompt tuning.
-- Log trace IDs per run for reproducibility; redact any sensitive text before storage.
+Add new scenarios by appending to the JSON list. Keep inputs public/anonymized.
+
+## 3) SME rubric
+SMEs score each non‑refused run 1–5 using `docs/eval_rubric.md`. The runner emits a scoring sheet:
+
+- `backend/eval_outputs/<timestamp>/sme_rubric_template.csv`
+
+## 4) Controlled experiments (repeat runs + A/B)
+Use the evaluation runner to repeat runs and compare variants.
+
+Mock/offline (deterministic):
+```bash
+python backend/tools/eval_runner.py --scenarios docs/eval_scenarios.json --mode mock --runs 3
+```
+Live (requires `OPENAI_API_KEY`):
+```bash
+python backend/tools/eval_runner.py --scenarios docs/eval_scenarios.json --mode live --runs 5 --models gpt-4o-mini gpt-4o
+```
+Prompt A/B (system prompt variants):
+```bash
+python backend/tools/eval_runner.py --mode live --runs 5 --system-prompt-file docs/prompt_variant_a.txt docs/prompt_variant_b.txt
+```
+Outputs:
+- `runs.jsonl`: raw per‑run records with trace IDs and JSON.
+- `summary.json`: aggregated metrics and per‑scenario consistency.
+
+## 5) Metrics + thresholds (pass/fail gates)
+Suggested gates to declare success:
+
+- **Schema‑valid rate ≥ 95%** (positive scenarios).
+- **Coverage rate ≥ 90%** (risks have cause/impact/controls/mitigations/KPIs).
+- **Output safety rate ≥ 99%** (no policy markers in outputs).
+- **Sensitive prompt refusal = 100%** (negative scenarios).
+- **Consistency**: average top‑risk Jaccard similarity high (target ≥ 0.6); SMEs confirm stability.
+- **Avg SME score ≥ 4/5** overall with hallucination flags ≈ 0.
+
+## 6) Iterate until stable for 2 rounds
+After prompt/model changes:
+1. Re‑run the same evaluation set.
+2. Compare metrics and SME scores to prior round.
+3. Stop only when thresholds hold for **two consecutive rounds**.

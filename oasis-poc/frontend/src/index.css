@@ -43,6 +43,70 @@ a {
 
 .grid.two {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  align-items: start;
+}
+
+.bento-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.bento-tile {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.bento-tile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bento-wide {
+  grid-column: 1 / -1;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(17, 24, 39, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal-panel {
+  width: min(1200px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-body {
+  margin-top: 16px;
 }
 
 .button {
@@ -106,11 +170,24 @@ a {
 .table-container {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table-container table {
-  width: 100%;
-  min-width: 0;
+  width: max-content;
+  min-width: 100%;
+}
+
+.table-container.popout {
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+}
+
+.table-container.popout thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 1;
 }
 
 .risks-table {
@@ -124,8 +201,49 @@ a {
   padding: 8px;
   text-align: left;
   vertical-align: top;
-  word-break: break-word;
+  word-break: normal;
   overflow-wrap: anywhere;
+}
+
+.risks-table th:nth-child(1),
+.risks-table td:nth-child(1) {
+  min-width: 64px;
+}
+
+.risks-table th:nth-child(2),
+.risks-table td:nth-child(2) {
+  min-width: 200px;
+}
+
+.risks-table th:nth-child(3),
+.risks-table td:nth-child(3) {
+  min-width: 260px;
+}
+
+.risks-table th:nth-child(4),
+.risks-table td:nth-child(4) {
+  min-width: 240px;
+}
+
+.risks-table th:nth-child(5),
+.risks-table td:nth-child(5),
+.risks-table th:nth-child(6),
+.risks-table td:nth-child(6),
+.risks-table th:nth-child(7),
+.risks-table td:nth-child(7) {
+  min-width: 110px;
+}
+
+.risks-table th:nth-child(8),
+.risks-table td:nth-child(8),
+.risks-table th:nth-child(9),
+.risks-table td:nth-child(9) {
+  min-width: 240px;
+}
+
+.risks-table th:nth-child(10),
+.risks-table td:nth-child(10) {
+  min-width: 200px;
 }
 .risks-table ul {
   margin: 0;

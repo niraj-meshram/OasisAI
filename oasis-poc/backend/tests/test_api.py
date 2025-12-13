@@ -34,6 +34,11 @@ def test_analyze_mock_success():
     assert "trace_id" in data and data["trace_id"]
     assert "summary" in data and isinstance(data["summary"], str)
     assert isinstance(data.get("risks"), list) and len(data["risks"]) > 0
+    for risk in data["risks"]:
+        assert isinstance(risk.get("control_mappings"), list)
+        assert isinstance(risk.get("vulnerability_summaries"), list)
+    assert len(data["risks"][0]["control_mappings"]) > 0
+    assert len(data["risks"][0]["vulnerability_summaries"]) > 0
 
 
 def test_analyze_blocks_private_indicators():
@@ -93,6 +98,26 @@ def test_analyze_allows_customer_context_without_data():
     assert resp.status_code == 200
 
 
+def test_prompt_variants_endpoint_lists_defaults():
+    resp = client.get("/api/v1/risk/prompt-variants")
+    assert resp.status_code == 200
+    variants = resp.json()
+    assert "default" in variants
+    # variants shipped with repo
+    assert "variant_a" in variants
+    assert "variant_b" in variants
+
+
+def test_analyze_rejects_unknown_prompt_variant():
+    payload = {
+        "business_type": "Retail banking",
+        "risk_domain": "Operational",
+        "objectives": "Create risk register",
+        "constraints": "Public data only",
+    }
+    resp = client.post("/api/v1/risk/analyze?mode=mock&prompt_variant=does_not_exist", json=payload)
+    assert resp.status_code == 400
+
 def test_parse_llm_json_coerces_numeric_risk_ids():
     payload = {
         "summary": "Test summary",
@@ -115,3 +140,15 @@ def test_parse_llm_json_coerces_numeric_risk_ids():
     }
     parsed = _parse_llm_json(json.dumps(payload), trace_id="abc")
     assert parsed.risks[0].risk_id == "1"
+
+
+def test_parse_llm_json_allows_code_fences_and_trailing_commas():
+    raw = """```json
+{
+  "summary": "Test summary",
+  "risks": [],
+  "assumptions_gaps": [],
+}
+```"""
+    parsed = _parse_llm_json(raw, trace_id="abc")
+    assert parsed.summary == "Test summary"

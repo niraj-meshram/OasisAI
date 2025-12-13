@@ -1,22 +1,37 @@
 type Props = {
+  title?: string;
+  onBack?: () => void;
+  backLabel?: string;
   isAuthenticated?: boolean;
   onLogin?: () => void;
   onLogout?: () => void;
   userName?: string;
 };
 
-function Header({ isAuthenticated, onLogin, onLogout, userName }: Props) {
+function Header({
+  title = 'Oasis Risk PoC',
+  onBack,
+  backLabel = 'Back',
+  isAuthenticated,
+  onLogin,
+  onLogout,
+  userName,
+}: Props) {
   return (
     <header className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <div>
-        <h1 style={{ margin: '0 0 4px 0' }}>Oasis Risk PoC</h1>
+        <h1 style={{ margin: '0 0 4px 0' }}>{title}</h1>
         <p className="muted" style={{ margin: 0 }}>
           Prompt-templated LLM for risk narratives, registers, mitigations, and KPIs.
         </p>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {onBack && (
+          <button className="button secondary pill" type="button" onClick={onBack}>
+            {backLabel}
+          </button>
+        )}
         {userName && <div className="pill">Signed in as {userName}</div>}
-        <div className="pill">PoC</div>
         {!isAuthenticated && onLogin && (
           <button className="button secondary pill" type="button" onClick={onLogin}>
             Log in
