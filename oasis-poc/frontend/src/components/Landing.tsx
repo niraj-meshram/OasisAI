@@ -1,6 +1,7 @@
 type Props = {
   onHeaderStart: () => void;
   onBodyStart: () => void;
+  onEvalStart: () => void;
   onLogin?: () => void;
   onSignup?: () => void;
   onLogout?: () => void;
@@ -8,7 +9,16 @@ type Props = {
   userName?: string;
 };
 
-function Landing({ onHeaderStart, onBodyStart, onLogin, onSignup, onLogout, isAuthenticated, userName }: Props) {
+function Landing({
+  onHeaderStart,
+  onBodyStart,
+  onEvalStart,
+  onLogin,
+  onSignup,
+  onLogout,
+  isAuthenticated,
+  userName,
+}: Props) {
   return (
     <div className="landing">
       <div className="bg-layer sky" />
@@ -74,9 +84,14 @@ function Landing({ onHeaderStart, onBodyStart, onLogin, onSignup, onLogout, isAu
             </div>
           </div>
         </div>
-        <button className="button" type="button" onClick={onBodyStart}>
-          Demo
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="button" type="button" onClick={onBodyStart}>
+            Demo
+          </button>
+          <button className="button secondary" type="button" onClick={onEvalStart}>
+            Eval
+          </button>
+        </div>
       </div>
     </div>
   );

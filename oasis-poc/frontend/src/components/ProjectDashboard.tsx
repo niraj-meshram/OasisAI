@@ -13,7 +13,7 @@ function ProjectDashboard({ result, loading }: Props) {
         <span className="pill">{loading ? 'Running' : result ? 'Complete' : 'Idle'}</span>
       </div>
       <p className="muted">
-        Submit a scenario to generate a narrative, risk register, mitigations, and monitoring KPIs. Mock mode works without keys.
+        Submit a scenario to generate a narrative, risk register, mitigations, monitoring KPIs, control mappings, and vulnerability summaries. Mock mode works without keys.
       </p>
       {result && (
         <div>

@@ -31,6 +31,23 @@ PoC for an AI-driven risk-management assistant using a structured prompt templat
 - Wireframes/UX flows documented in `docs/wireframes.md` (Figma guidance, paths/states).
 - CI: backend bytecode compile; frontend build (`.github/workflows/ci.yml`).
 
+## Evaluation harness
+This repo includes a lightweight evaluation suite to validate the prompt‑templated LLM approach.
+
+- Scenarios: `docs/eval_scenarios.json` (20+ representative cases, including negative/refusal prompts).
+- SME rubric: `docs/eval_rubric.md`.
+- Runner: `backend/tools/eval_runner.py` (repeated runs, A/B models or prompt variants, metrics).
+
+Run mock/offline evaluation:
+```bash
+python backend/tools/eval_runner.py --scenarios docs/eval_scenarios.json --mode mock --runs 3
+```
+Run live evaluation (requires `OPENAI_API_KEY` and network):
+```bash
+python backend/tools/eval_runner.py --scenarios docs/eval_scenarios.json --mode live --runs 5 --models gpt-4o-mini gpt-4o
+```
+Outputs land in `backend/eval_outputs/<timestamp>/` with `runs.jsonl`, `summary.json`, and `sme_rubric_template.csv` for scoring.
+
 ## Project layout
 - `.github/workflows/ci.yml` - CI placeholder
 - `backend/` - FastAPI service and LLM orchestration

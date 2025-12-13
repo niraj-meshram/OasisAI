@@ -22,6 +22,7 @@ backend/.coverage
 backend/.mypy_cache/
 backend/.ruff_cache/
 backend/.ipynb_checkpoints/
+backend/eval_outputs/
 backend/**/*.pyc
 backend/**/*.pyo
 backend/**/*.pyd

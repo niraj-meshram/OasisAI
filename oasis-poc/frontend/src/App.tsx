@@ -5,6 +5,7 @@ import Landing from './components/Landing';
 import ProjectDashboard from './components/ProjectDashboard';
 import AssessmentWizard from './components/Wizard/AssessmentWizard';
 import ResultsViewer from './components/Results/ResultsViewer';
+import EvalPage from './components/Eval/EvalPage';
 import { Mode, analyzeRisk, RiskRequest, RiskResponse } from './services/api';
 
 type AuthContext = {
@@ -21,13 +22,15 @@ type AppShellProps = {
   auth: AuthContext;
 };
 
+type View = 'landing' | 'demo' | 'eval';
+
 function AppShell({ auth }: AppShellProps) {
   const [result, setResult] = useState<RiskResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('auto');
   const [llmModel, setLlmModel] = useState<string>('gpt-4o-mini');
-  const [hasStarted, setHasStarted] = useState(false);
+  const [view, setView] = useState<View>('landing');
   const openAiModels = [
     'gpt-5',
     'gpt-5-mini',
@@ -43,21 +46,35 @@ function AppShell({ auth }: AppShellProps) {
   const { isAuthenticated, isLoading, login, signUp, logout, userName, authDisabled } = auth;
   const displayName = userName || 'User';
 
+  const resetResults = () => {
+    setResult(null);
+    setError(null);
+  };
+
   useEffect(() => {
-    const handlePopState = () => setHasStarted(false);
+    const handlePopState = () => setView('landing');
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
-    if (hasStarted) {
-      window.history.pushState({ hasStarted: true }, '', window.location.href);
+    if (view !== 'landing') {
+      window.history.pushState({ view }, '', window.location.href);
     }
-  }, [hasStarted]);
+  }, [view]);
 
-  const startOrLogin = () => {
+  const startDemoOrLogin = () => {
     if (isAuthenticated || authDisabled) {
-      setHasStarted(true);
+      resetResults();
+      setView('demo');
+    } else {
+      login();
+    }
+  };
+
+  const startEvalOrLogin = () => {
+    if (isAuthenticated || authDisabled) {
+      setView('eval');
     } else {
       login();
     }
@@ -89,21 +106,23 @@ function AppShell({ auth }: AppShellProps) {
     );
   }
 
-  const handleHeaderStart = () => startOrLogin();
-  const handleBodyStart = () => startOrLogin();
+  const handleHeaderStart = () => startDemoOrLogin();
+  const handleBodyStart = () => startDemoOrLogin();
+  const handleEvalStart = () => startEvalOrLogin();
 
   const handleLogout = () => {
-    setHasStarted(false);
+    setView('landing');
     if (!authDisabled && logout) {
       logout();
     }
   };
 
-  if (!hasStarted) {
+  if (view === 'landing') {
     return (
       <Landing
         onHeaderStart={handleHeaderStart}
         onBodyStart={handleBodyStart}
+        onEvalStart={handleEvalStart}
         onLogin={isAuthenticated || authDisabled ? handleHeaderStart : () => login()}
         onSignup={
           isAuthenticated || authDisabled
@@ -117,6 +136,21 @@ function AppShell({ auth }: AppShellProps) {
     );
   }
 
+  if (view === 'eval') {
+    return (
+      <div className="app-shell">
+        <Header
+          title="Eval - Oasis Risk PoC"
+          isAuthenticated={isAuthenticated || authDisabled}
+          onLogin={!isAuthenticated && !authDisabled ? () => login() : undefined}
+          userName={displayName}
+          onLogout={isAuthenticated && !authDisabled ? handleLogout : undefined}
+        />
+        <EvalPage onBack={() => setView('landing')} />
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <Header
@@ -126,31 +160,52 @@ function AppShell({ auth }: AppShellProps) {
         onLogout={isAuthenticated && !authDisabled ? handleLogout : undefined}
       />
       <div className="card" style={{ margin: '16px 0' }}>
-        <strong style={{ marginRight: 12 }}>Mode:</strong>
-        <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <strong>Mode:</strong>
+            <div style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={`button ${mode === 'mock' ? '' : 'secondary'}`}
+                onClick={() => setMode('mock')}
+                disabled={loading}
+              >
+                Mock (offline)
+              </button>
+              <button
+                type="button"
+                className={`button ${mode === 'live' ? '' : 'secondary'}`}
+                onClick={() => setMode('live')}
+                disabled={loading}
+              >
+                Live LLM
+              </button>
+              <button
+                type="button"
+                className={`button ${mode === 'auto' ? '' : 'secondary'}`}
+                onClick={() => setMode('auto')}
+                disabled={loading}
+              >
+                Auto (backend default)
+              </button>
+            </div>
+          </div>
           <button
+            className="button secondary"
             type="button"
-            className={`button ${mode === 'mock' ? '' : 'secondary'}`}
-            onClick={() => setMode('mock')}
+            onClick={() => setView('landing')}
             disabled={loading}
+            style={{ whiteSpace: 'nowrap' }}
           >
-            Mock (offline)
-          </button>
-          <button
-            type="button"
-            className={`button ${mode === 'live' ? '' : 'secondary'}`}
-            onClick={() => setMode('live')}
-            disabled={loading}
-          >
-            Live LLM
-          </button>
-          <button
-            type="button"
-            className={`button ${mode === 'auto' ? '' : 'secondary'}`}
-            onClick={() => setMode('auto')}
-            disabled={loading}
-          >
-            Auto (backend default)
+            Back to landing
           </button>
         </div>
         {mode === 'live' && (
@@ -180,7 +235,7 @@ function AppShell({ auth }: AppShellProps) {
       <div className="grid two">
         <div className="grid">
           <ProjectDashboard result={result} loading={loading} />
-          <AssessmentWizard onSubmit={handleSubmit} loading={loading} />
+          <AssessmentWizard onSubmit={handleSubmit} onReset={resetResults} loading={loading} />
           {error && <div className="card" role="alert">Error: {error}</div>}
         </div>
         <ResultsViewer result={result} loading={loading} />

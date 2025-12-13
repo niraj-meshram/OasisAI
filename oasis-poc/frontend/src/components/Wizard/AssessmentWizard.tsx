@@ -3,6 +3,7 @@ import { RiskRequest } from '../../services/api';
 
 type Props = {
   onSubmit: (payload: RiskRequest) => Promise<void> | void;
+  onReset?: () => void;
   loading: boolean;
 };
 
@@ -66,7 +67,7 @@ const presets: Record<string, RiskRequest> = {
   },
 };
 
-function AssessmentWizard({ onSubmit, loading }: Props) {
+function AssessmentWizard({ onSubmit, onReset, loading }: Props) {
   const [form, setForm] = useState<RiskRequest>(defaultForm);
 
   const handleChange = (key: keyof RiskRequest, value: string | string[]) => {
@@ -207,7 +208,10 @@ function AssessmentWizard({ onSubmit, loading }: Props) {
         <button
           className="button secondary"
           type="button"
-          onClick={() => setForm(defaultForm)}
+          onClick={() => {
+            setForm(defaultForm);
+            onReset?.();
+          }}
           disabled={loading}
         >
           Reset
