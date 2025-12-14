@@ -23,6 +23,8 @@ backend/.mypy_cache/
 backend/.ruff_cache/
 backend/.ipynb_checkpoints/
 backend/eval_outputs/
+backend/oasis_store.json
+oasis_store.json
 backend/**/*.pyc
 backend/**/*.pyo
 backend/**/*.pyd

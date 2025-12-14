@@ -27,11 +27,19 @@ def build_user_prompt(payload: RiskRequest) -> str:
         payload.instruction_tuning or "Use concise, action-oriented tone; cite public frameworks only."
     )
     constraints = payload.constraints or "None provided"
+    known_controls = ", ".join(payload.known_controls) if payload.known_controls else "None"
+    verbosity = payload.verbosity or "concise"
+    language = payload.language or "English"
+    rag_enabled = "Enabled" if payload.rag_enabled else "Disabled"
     return "\n".join(
         [
             "=== Context ===",
             f"Business Type: {payload.business_type}",
             f"Risk Domain: {payload.risk_domain}",
+            f"Scope: {payload.scope or 'Unspecified'}",
+            f"Time Horizon: {payload.time_horizon or 'Unspecified'}",
+            f"Known Controls: {known_controls}",
+            f"Options: RAG={rag_enabled}; Verbosity={verbosity}; Language={language}",
             f"Region: {payload.region or 'Unspecified'}",
             f"Org Size: {payload.size or 'Unspecified'}",
             f"Control Maturity: {payload.maturity or 'Unspecified'}",
@@ -46,6 +54,10 @@ def build_user_prompt(payload: RiskRequest) -> str:
             "=== Instruction Tuning ===",
             instruction_tuning,
             "=== Outputs ===",
+            (
+                "Verbosity guidance: concise=3-5 risks; standard=4-6 risks; detailed=6-8 risks (still bounded). "
+                "Write narrative fields in the requested language when possible."
+            ),
             "Return JSON only with keys: summary, risks (list of risk objects), assumptions_gaps (list of strings).",
             (
                 "Risk object fields: risk_id, risk_title, cause, impact, likelihood, inherent_rating, "

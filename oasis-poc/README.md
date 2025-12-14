@@ -9,7 +9,7 @@ PoC for an AI-driven risk-management assistant using a structured prompt templat
 - Deliver a working PoC UI to demo the AI interface.
 
 ## Scope & constraints
-- PoC only: no persistence, no production hardening, minimal CI.
+- PoC only: lightweight local persistence (JSON store), no production hardening, minimal CI.
 - Data policy: public/industry knowledge only; no corporate data, no PII/PHI; refuse tasks requiring them.
 - Modes: Mock (offline canned data), Live (LLM), Auto (backend default).
 - Default mock_mode true so demos work without keys.
@@ -17,11 +17,11 @@ PoC for an AI-driven risk-management assistant using a structured prompt templat
 - Token efficiency: concise prompts/responses; JSON schema enforced.
 
 ## Solution outline
-- Backend FastAPI service with `POST /api/v1/risk/analyze` and `GET /health` (`backend/app/api/v1/routes.py`).
+- Backend FastAPI service with `POST /api/v1/risk/analyze`, workflow APIs (projects/assessments/versions), and `GET /health` (`backend/app/api/v1/routes.py`).
 - Schema and prompt template in `backend/app/api/v1/schemas.py` and `backend/app/services/prompt_engine.py`.
 - LLM adapter supports mock and OpenAI JSON mode (`backend/app/services/llm_adapter.py`).
 - Frontend Vite/React wizard + results viewer with mode toggle (`frontend/src`).
-- Trace ID returned for basic observability; no DB layer (placeholder in `backend/app/db`).
+- Versioned audit trail stored in a local JSON file store (`backend/app/db/store.py`, configurable via `OASIS_STORE_PATH`).
 - Data policy guardrail blocks obvious non-public/PII markers before calling the LLM (`backend/app/core/data_policy.py`).
 
 ## Development & testing approach
@@ -70,12 +70,29 @@ Copy `.env.example` to `.env` and adjust:
 - `MOCK_MODE=true` keeps responses offline with canned data.
 - `OPENAI_API_KEY` (env-only) and `LLM_MODEL` enable live calls (requires network access).
 - `APP_API_KEY` protects the API; send it via `x-api-key` header (frontend env `VITE_APP_API_KEY` can match).
+- `OASIS_STORE_PATH` sets the local JSON persistence file for projects/assessments/versions (defaults to `oasis_store.json`).
+- RBAC:
+  - `OASIS_AUTH_MODE=disabled|api_key|jwt`
+  - `OASIS_DEFAULT_ROLES=analyst|reviewer|admin` (used when auth is disabled)
+  - `OASIS_JWT_ISSUER`, `OASIS_JWT_AUDIENCE`, `OASIS_JWT_JWKS_URL`, `OASIS_JWT_ROLES_CLAIM` (OIDC/JWT mode)
 - `ALLOWED_ORIGINS` controls CORS; accepts `*`, a single origin, comma-separated list (e.g., `https://a.com,https://b.com`), or a JSON array; defaults to `*` when blank.
 - Data policy guardrail rejects inputs containing markers like `pii`, `ssn`, `confidential`, `customer`, etc. Provide public/anonymized context only.
 - Per-request override: `POST /api/v1/risk/analyze?mode=mock|live|auto` (auto uses backend default).
 
 ### API
 - `POST /api/v1/risk/analyze` - Request body matches `RiskRequest` in `backend/app/api/v1/schemas.py`. Returns `RiskResponse`.
+- Workflow (persistence):
+  - `GET/POST /api/v1/projects`
+  - `GET/POST /api/v1/projects/{project_id}/assessments`
+  - `POST /api/v1/assessments/{assessment_id}/run` (creates a new version)
+  - `GET /api/v1/assessments/{assessment_id}/versions`
+  - `POST/GET /api/v1/assessments/{assessment_id}/versions/{version_id}/feedback`
+  - `GET /api/v1/assessments/{assessment_id}/versions/{version_id}/export?format=markdown|csv|json`
+- Admin (RBAC-protected):
+  - `GET/POST/PUT /api/v1/admin/prompt-templates`
+  - `POST /api/v1/admin/prompt-templates/{name}/test-run`
+  - `GET /api/v1/admin/settings`
+  - `GET /api/v1/admin/audit`
 - `GET /health` - basic health check.
 - Example request:
 ```bash
@@ -110,6 +127,12 @@ Configure `VITE_API_BASE` in `frontend/.env` (defaults to `http://localhost:8000
 - Quick-start scenario buttons cover three contexts: digital onboarding (retail banking), cloud migration (compliance workload), and fintech fraud monitoring integration.
 - Results view includes a simple evaluation matrix that flags structure/coverage issues (summary, risks, mitigations, KPIs, assumptions).
 
+### Roles (RBAC)
+- Roles: `admin`, `analyst`, `reviewer`. UI hides/shows areas by role, but backend RBAC is the real boundary.
+- Backend: set `OASIS_AUTH_MODE=jwt` to enforce Bearer JWT validation; ensure your IdP adds a roles/groups claim and set `OASIS_JWT_ROLES_CLAIM` if needed.
+- Frontend (Auth0): set `VITE_AUTH0_ROLES_CLAIM` to the user claim key that contains roles; for local demo without Auth0, set `VITE_DEMO_ROLES=admin,analyst,reviewer`.
+- More detail: `docs/rbac.md`.
+
 ## Docker
 ```bash
 docker-compose up --build
@@ -121,7 +144,8 @@ cd backend
 pytest
 ```
 Tests cover health, mock analyze flow, and data-policy guardrail.
+Tests also cover the workflow persistence endpoints (projects/assessments/versions/feedback/export) and basic RBAC checks in mock mode.
 
 ## Notes
-- PoC only; no persistence. Keep data non-confidential/public.
+- PoC only; lightweight local persistence. Keep data non-confidential/public.
 - Prompt and schema live in `backend/app/services/prompt_engine.py` and `backend/app/api/v1/schemas.py`.

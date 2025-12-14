@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 Likelihood = Literal["Low", "Medium", "High"]
 Severity = Literal["Low", "Medium", "High", "Critical"]
+Verbosity = Literal["concise", "standard", "detailed"]
 
 
 PublicSourceType = Literal[
@@ -71,6 +72,35 @@ class VulnerabilitySummary(BaseModel):
 class RiskRequest(BaseModel):
     business_type: str = Field(..., json_schema_extra={"example": "Retail banking"})
     risk_domain: str = Field(..., json_schema_extra={"example": "Operational"})
+    scope: Optional[str] = Field(
+        default=None,
+        json_schema_extra={"example": "Digital onboarding channel (new accounts)"},
+        description="Optional scope/context boundary (process/system/channel) for the assessment.",
+    )
+    time_horizon: Optional[str] = Field(
+        default=None,
+        json_schema_extra={"example": "0-12 months"},
+        description="Optional time horizon for the assessment (e.g., 0-6 months, 6-18 months).",
+    )
+    known_controls: List[str] = Field(
+        default_factory=list,
+        description="Optional list of known controls already in place (public/anonymized descriptions).",
+        json_schema_extra={"example": ["KYC/AML checks", "Vendor due diligence", "Change management"]},
+    )
+    rag_enabled: Optional[bool] = Field(
+        default=None,
+        description="PoC placeholder. When true, indicates RAG would be used for public references.",
+    )
+    verbosity: Optional[Verbosity] = Field(
+        default=None,
+        description="Optional output verbosity hint (concise|standard|detailed).",
+        json_schema_extra={"example": "concise"},
+    )
+    language: Optional[str] = Field(
+        default=None,
+        description="Optional language for narrative fields (JSON format is always enforced).",
+        json_schema_extra={"example": "English"},
+    )
     region: Optional[str] = Field(default=None, json_schema_extra={"example": "North America"})
     size: Optional[str] = Field(default=None, json_schema_extra={"example": "Mid"})
     maturity: Optional[str] = Field(default=None, json_schema_extra={"example": "Defined"})
