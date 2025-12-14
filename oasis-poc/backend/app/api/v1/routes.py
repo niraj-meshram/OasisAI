@@ -4,17 +4,21 @@ from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.v1.schemas import RiskRequest, RiskResponse
+from app.api.v1.admin_routes import router as admin_router
+from app.api.v1.workflow_routes import router as workflow_router
 from app.core.auth import verify_api_key
 from app.core.config import Settings, get_settings
 from app.core.data_policy import find_private_indicators
+from app.core.rbac import UserPrincipal, require_roles
 from app.services.llm_adapter import run_llm
 from app.services.prompt_variants import get_system_prompt, list_prompt_variant_names
 
-router = APIRouter(prefix="/risk", tags=["risk"])
+risk_router = APIRouter(prefix="/risk", tags=["risk"])
+router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/prompt-variants", response_model=list[str])
+@risk_router.get("/prompt-variants", response_model=list[str])
 def list_prompt_variants() -> list[str]:
     """
     Return available system prompt variant names.
@@ -22,7 +26,7 @@ def list_prompt_variants() -> list[str]:
     return list_prompt_variant_names()
 
 
-@router.post("/analyze", response_model=RiskResponse, dependencies=[Depends(verify_api_key)])
+@risk_router.post("/analyze", response_model=RiskResponse, dependencies=[Depends(verify_api_key)])
 def analyze_risk(
     payload: RiskRequest,
     mode: Literal["auto", "mock", "live"] = Query("auto"),
@@ -35,6 +39,7 @@ def analyze_risk(
         default=None,
         description="Optional system prompt variant name (e.g., default, variant_a, variant_b).",
     ),
+    _: UserPrincipal = Depends(require_roles("analyst")),
     settings: Settings = Depends(get_settings),
 ) -> RiskResponse:
     """
@@ -60,6 +65,11 @@ def analyze_risk(
         [
             payload.business_type,
             payload.risk_domain,
+            payload.scope,
+            payload.time_horizon,
+            " ".join(payload.known_controls) if payload.known_controls else None,
+            payload.verbosity,
+            payload.language,
             payload.region,
             payload.size,
             payload.maturity,
@@ -107,3 +117,8 @@ def analyze_risk(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Risk analysis failed. Check backend logs for details.",
         ) from exc
+
+
+router.include_router(risk_router)
+router.include_router(workflow_router)
+router.include_router(admin_router)

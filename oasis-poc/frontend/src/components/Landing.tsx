@@ -1,23 +1,37 @@
 type Props = {
-  onHeaderStart: () => void;
-  onBodyStart: () => void;
+  onOpenAnalyst: () => void;
+  onOpenReviewer: () => void;
+  onOpenAdminTemplates: () => void;
+  onOpenAdminSettings: () => void;
   onEvalStart: () => void;
+  canAnalyst: boolean;
+  canReviewer: boolean;
+  canAdmin: boolean;
   onLogin?: () => void;
   onSignup?: () => void;
   onLogout?: () => void;
   isAuthenticated?: boolean;
   userName?: string;
+  error?: string | null;
+  onDismissError?: () => void;
 };
 
 function Landing({
-  onHeaderStart,
-  onBodyStart,
+  onOpenAnalyst,
+  onOpenReviewer,
+  onOpenAdminTemplates,
+  onOpenAdminSettings,
   onEvalStart,
+  canAnalyst,
+  canReviewer,
+  canAdmin,
   onLogin,
   onSignup,
   onLogout,
   isAuthenticated,
   userName,
+  error,
+  onDismissError,
 }: Props) {
   return (
     <div className="landing">
@@ -59,15 +73,15 @@ function Landing({
                 </button>
               ) : (
                 <>
-                  <button className="rw-cta ghost" type="button" onClick={onLogin || onHeaderStart}>
+                  <button className="rw-cta ghost" type="button" onClick={onLogin || onOpenAnalyst}>
                     Log in
                   </button>
-                  <button className="rw-cta ghost" type="button" onClick={onSignup || onHeaderStart}>
+                  <button className="rw-cta ghost" type="button" onClick={onSignup || onOpenAnalyst}>
                     Sign up
                   </button>
                 </>
               )}
-              <button className="rw-cta solid" type="button" onClick={onHeaderStart}>
+              <button className="rw-cta solid" type="button" onClick={onOpenAnalyst}>
                 Get started
               </button>
               <div
@@ -75,7 +89,7 @@ function Landing({
                 role="button"
                 tabIndex={0}
                 aria-label={isAuthenticated ? 'Continue to app' : 'Open menu'}
-                onClick={onHeaderStart}
+                onClick={onOpenAnalyst}
               >
                 <span />
                 <span />
@@ -84,13 +98,74 @@ function Landing({
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="button" type="button" onClick={onBodyStart}>
-            Demo
-          </button>
-          <button className="button secondary" type="button" onClick={onEvalStart}>
-            Eval
-          </button>
+        <div className="card" style={{ width: 'min(1100px, 100%)' }}>
+          {error && (
+            <div className="card" role="alert" style={{ padding: 12, boxShadow: 'none', marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <div>Error: {error}</div>
+                {onDismissError && (
+                  <button className="button secondary pill" type="button" onClick={onDismissError}>
+                    Dismiss
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          <h2 style={{ marginTop: 0 }}>Choose an area</h2>
+          <p className="muted" style={{ marginTop: 0 }}>
+            Your role controls what you can do. UI gating is for UX; backend RBAC is the security boundary.
+          </p>
+          <div className="bento-grid">
+            <button className="bento-tile" type="button" onClick={onOpenAnalyst} disabled={!canAnalyst}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <h3 style={{ margin: 0 }}>New Assessment Wizard</h3>
+                <span className="pill">Risk Analyst</span>
+              </div>
+              <p className="muted" style={{ marginBottom: 0 }}>
+                Create assessments, generate outputs, and export artifacts.
+              </p>
+            </button>
+
+            <button className="bento-tile" type="button" onClick={onOpenReviewer} disabled={!canReviewer}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <h3 style={{ margin: 0 }}>Results Viewer</h3>
+                <span className="pill">Reviewer</span>
+              </div>
+              <p className="muted" style={{ marginBottom: 0 }}>
+                Inspect provenance, compare versions, and provide feedback.
+              </p>
+            </button>
+
+            <button className="bento-tile" type="button" onClick={onOpenAdminTemplates} disabled={!canAdmin}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <h3 style={{ margin: 0 }}>Prompt Templates Manager</h3>
+                <span className="pill">Admin</span>
+              </div>
+              <p className="muted" style={{ marginBottom: 0 }}>
+                Create/version/test system prompt variants.
+              </p>
+            </button>
+
+            <button className="bento-tile" type="button" onClick={onOpenAdminSettings} disabled={!canAdmin}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <h3 style={{ margin: 0 }}>Settings & Audit Logs</h3>
+                <span className="pill">Admin</span>
+              </div>
+              <p className="muted" style={{ marginBottom: 0 }}>
+                View sanitized settings plus recent versions/feedback.
+              </p>
+            </button>
+
+            <button className="bento-tile bento-wide" type="button" onClick={onEvalStart}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                <h3 style={{ margin: 0 }}>Evaluation Harness</h3>
+                <span className="pill">PoC</span>
+              </div>
+              <p className="muted" style={{ marginBottom: 0 }}>
+                Run scenario-based evals (mock/live) and download SME scorecards.
+              </p>
+            </button>
+          </div>
         </div>
       </div>
     </div>

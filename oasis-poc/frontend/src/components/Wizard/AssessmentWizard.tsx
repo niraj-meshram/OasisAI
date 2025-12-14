@@ -1,13 +1,21 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { RiskRequest } from '../../services/api';
 
 type Props = {
-  onSubmit: (payload: RiskRequest) => Promise<void> | void;
+  onSubmit: (payload: RiskRequest, templateId: string | null) => Promise<void> | void;
   onReset?: () => void;
   loading: boolean;
+  initialForm?: RiskRequest;
+  initialTemplateId?: string | null;
 };
 
 const defaultForm: RiskRequest = {
+  scope: '',
+  time_horizon: '',
+  known_controls: [],
+  rag_enabled: false,
+  verbosity: 'concise',
+  language: 'English',
   business_type: 'Retail banking',
   risk_domain: 'Operational',
   region: '',
@@ -22,53 +30,126 @@ const defaultForm: RiskRequest = {
   instruction_tuning: 'Use public frameworks only; keep sentences short; avoid speculative claims.',
 };
 
-const presets: Record<string, RiskRequest> = {
+type Preset = {
+  templateId: string;
+  payload: RiskRequest;
+};
+
+const presets: Record<string, Preset> = {
   'Digital onboarding (retail banking)': {
-    business_type: 'Retail banking',
-    risk_domain: 'Operational',
-    region: 'North America',
-    size: 'Mid',
-    maturity: 'Defined',
-    objectives: 'Assess onboarding reliability and fraud controls',
-    context: 'Launching digital onboarding for new customers',
-    constraints: 'Public data only; no customer PII; use public regs',
-    requested_outputs: 'Narrative + register + mitigations + KPIs',
-    refinements: 'Emphasize KYC/AML expectations',
-    control_tokens: ['tone=regulatory', 'length=concise'],
-    instruction_tuning: 'Highlight operational resilience and KYC controls.',
+    templateId: 'operational',
+    payload: {
+      scope: 'Digital onboarding channel (new accounts)',
+      time_horizon: '0-12 months',
+      known_controls: ['KYC/AML checks', 'Fraud monitoring', 'Customer identity verification'],
+      rag_enabled: false,
+      verbosity: 'concise',
+      language: 'English',
+      business_type: 'Retail banking',
+      risk_domain: 'Operational',
+      region: 'North America',
+      size: 'Mid',
+      maturity: 'Defined',
+      objectives: 'Assess onboarding reliability and fraud controls',
+      context: 'Launching digital onboarding for new customers',
+      constraints: 'Public data only; no customer PII; use public regs',
+      requested_outputs: 'Narrative + register + mitigations + KPIs',
+      refinements: 'Emphasize KYC/AML expectations',
+      control_tokens: ['tone=regulatory', 'length=concise'],
+      instruction_tuning: 'Highlight operational resilience and KYC controls.',
+    },
   },
   'Cloud migration (compliance workload)': {
-    business_type: 'Financial services',
-    risk_domain: 'Regulatory',
-    region: 'EU',
-    size: 'Large',
-    maturity: 'Managed',
-    objectives: 'Evaluate compliance posture for cloud migration',
-    context: 'Moving regulated workloads to cloud across regions',
-    constraints: 'No proprietary data; reference public standards (e.g., ISO, NIST)',
-    requested_outputs: 'Controls, mitigations, KPIs for residency and access',
-    refinements: 'Highlight data residency and change control',
-    control_tokens: ['tone=assurance', 'length=concise', 'format=numbered'],
-    instruction_tuning: 'Emphasize residency, access control, and change management.',
+    templateId: 'regulatory-compliance',
+    payload: {
+      scope: 'Regulated workloads migrating to public cloud',
+      time_horizon: '6-18 months',
+      known_controls: ['Change management', 'Access control', 'Data classification'],
+      rag_enabled: false,
+      verbosity: 'standard',
+      language: 'English',
+      business_type: 'Financial services',
+      risk_domain: 'Regulatory',
+      region: 'EU',
+      size: 'Large',
+      maturity: 'Managed',
+      objectives: 'Evaluate compliance posture for cloud migration',
+      context: 'Moving regulated workloads to cloud across regions',
+      constraints: 'No proprietary data; reference public standards (e.g., ISO, NIST)',
+      requested_outputs: 'Controls, mitigations, KPIs for residency and access',
+      refinements: 'Highlight data residency and change control',
+      control_tokens: ['tone=assurance', 'length=concise', 'format=numbered'],
+      instruction_tuning: 'Emphasize residency, access control, and change management.',
+    },
   },
   'Fintech fraud monitoring integration': {
-    business_type: 'Payments/Fintech',
-    risk_domain: 'Fraud',
-    region: 'Global',
-    size: 'Mid',
-    maturity: 'Emerging',
-    objectives: 'Assess fraud monitoring integration with partner',
-    context: 'Integrating third-party fraud scoring for card-not-present traffic',
-    constraints: 'No customer data; rely on public patterns and controls',
-    requested_outputs: 'Narrative + register + mitigations + KPIs',
-    refinements: 'Cover SLA risks and model drift monitoring',
-    control_tokens: ['tone=practical', 'length=concise'],
-    instruction_tuning: 'Call out third-party SLAs and model drift monitoring.',
+    templateId: 'operational',
+    payload: {
+      scope: 'Third-party fraud monitoring integration',
+      time_horizon: '0-6 months',
+      known_controls: ['Vendor due diligence', 'SLA monitoring', 'Model performance monitoring'],
+      rag_enabled: false,
+      verbosity: 'concise',
+      language: 'English',
+      business_type: 'Payments/Fintech',
+      risk_domain: 'Fraud',
+      region: 'Global',
+      size: 'Mid',
+      maturity: 'Emerging',
+      objectives: 'Assess fraud monitoring integration with partner',
+      context: 'Integrating third-party fraud scoring for card-not-present traffic',
+      constraints: 'No customer data; rely on public patterns and controls',
+      requested_outputs: 'Narrative + register + mitigations + KPIs',
+      refinements: 'Cover SLA risks and model drift monitoring',
+      control_tokens: ['tone=practical', 'length=concise'],
+      instruction_tuning: 'Call out third-party SLAs and model drift monitoring.',
+    },
   },
 };
 
-function AssessmentWizard({ onSubmit, onReset, loading }: Props) {
-  const [form, setForm] = useState<RiskRequest>(defaultForm);
+const templateDefaults: Record<string, Partial<RiskRequest>> = {
+  operational: {
+    risk_domain: 'Operational',
+    instruction_tuning:
+      'Use public frameworks only; keep sentences short; avoid speculative claims; emphasize operational resilience and controls.',
+    control_tokens: ['tone=regulatory', 'length=concise'],
+  },
+  cybersecurity: {
+    risk_domain: 'Cyber',
+    instruction_tuning:
+      'Use public frameworks only; keep sentences short; avoid speculative claims; emphasize cybersecurity controls and monitoring.',
+    control_tokens: ['tone=technical', 'length=concise', 'format=numbered'],
+  },
+  'regulatory-compliance': {
+    risk_domain: 'Regulatory',
+    instruction_tuning:
+      'Use public frameworks only; keep sentences short; avoid speculative claims; emphasize regulatory expectations and evidence-based controls.',
+    control_tokens: ['tone=assurance', 'length=concise', 'format=numbered'],
+  },
+};
+
+function AssessmentWizard({ onSubmit, onReset, loading, initialForm, initialTemplateId }: Props) {
+  const [form, setForm] = useState<RiskRequest>(initialForm || defaultForm);
+  const [templateId, setTemplateId] = useState<string>(initialTemplateId || 'operational');
+
+  useEffect(() => {
+    setForm(initialForm || defaultForm);
+  }, [initialForm]);
+
+  useEffect(() => {
+    setTemplateId(initialTemplateId || 'operational');
+  }, [initialTemplateId]);
+
+  useEffect(() => {
+    const patch = templateDefaults[templateId];
+    if (!patch) return;
+    setForm((prev) => ({
+      ...prev,
+      risk_domain: patch.risk_domain || prev.risk_domain,
+      instruction_tuning: patch.instruction_tuning || prev.instruction_tuning,
+      control_tokens: patch.control_tokens || prev.control_tokens,
+    }));
+  }, [templateId]);
 
   const handleChange = (key: keyof RiskRequest, value: string | string[]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -76,7 +157,7 @@ function AssessmentWizard({ onSubmit, onReset, loading }: Props) {
 
   const handleSubmit = async (evt: FormEvent) => {
     evt.preventDefault();
-    await onSubmit(form);
+    await onSubmit(form, templateId);
   };
 
   return (
@@ -89,12 +170,111 @@ function AssessmentWizard({ onSubmit, onReset, loading }: Props) {
             key={label}
             type="button"
             className="button pill secondary"
-            onClick={() => setForm(preset)}
+            onClick={() => {
+              setTemplateId(preset.templateId);
+              setForm(preset.payload);
+            }}
             disabled={loading}
           >
             {label}
           </button>
         ))}
+      </div>
+      <div className="grid two">
+        <div className="field">
+          <label htmlFor="template_id">Use Case Template</label>
+          <select
+            id="template_id"
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            disabled={loading}
+          >
+            <option value="operational">Operational</option>
+            <option value="cybersecurity">Cybersecurity</option>
+            <option value="regulatory-compliance">Regulatory-Compliance</option>
+          </select>
+          <p className="muted" style={{ margin: 0 }}>
+            Template pre-fills tone and guidance; edit any field before submitting.
+          </p>
+        </div>
+        <div className="field">
+          <label htmlFor="verbosity">Verbosity</label>
+          <select
+            id="verbosity"
+            value={form.verbosity || 'concise'}
+            onChange={(e) => handleChange('verbosity', e.target.value)}
+            disabled={loading}
+          >
+            <option value="concise">Concise</option>
+            <option value="standard">Standard</option>
+            <option value="detailed">Detailed</option>
+          </select>
+        </div>
+      </div>
+      <div className="grid two">
+        <div className="field">
+          <label htmlFor="language">Language</label>
+          <input
+            id="language"
+            value={form.language ?? ''}
+            onChange={(e) => handleChange('language', e.target.value)}
+            disabled={loading}
+            placeholder="English"
+          />
+        </div>
+        <div className="field" style={{ alignContent: 'start' }}>
+          <label htmlFor="rag_enabled">RAG (public references)</label>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              id="rag_enabled"
+              type="checkbox"
+              checked={Boolean(form.rag_enabled)}
+              onChange={(e) => setForm((prev) => ({ ...prev, rag_enabled: e.target.checked }))}
+              disabled={loading}
+            />
+            <span className="muted">PoC placeholder (metadata only)</span>
+          </div>
+        </div>
+      </div>
+      <div className="grid two">
+        <div className="field">
+          <label htmlFor="scope">Scope</label>
+          <input
+            id="scope"
+            value={form.scope ?? ''}
+            onChange={(e) => handleChange('scope', e.target.value)}
+            disabled={loading}
+            placeholder="Process/system in scope, business units, channels"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="time_horizon">Time Horizon</label>
+          <input
+            id="time_horizon"
+            value={form.time_horizon ?? ''}
+            onChange={(e) => handleChange('time_horizon', e.target.value)}
+            disabled={loading}
+            placeholder="e.g., 0-6 months, 6-18 months"
+          />
+        </div>
+      </div>
+      <div className="field">
+        <label htmlFor="known_controls">Known Controls (one per line)</label>
+        <textarea
+          id="known_controls"
+          value={(form.known_controls || []).join('\n')}
+          onChange={(e) =>
+            setForm((prev) => ({
+              ...prev,
+              known_controls: e.target.value
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean),
+            }))
+          }
+          disabled={loading}
+          placeholder="KYC/AML checks&#10;Vendor due diligence&#10;Change control"
+        />
       </div>
       <div className="grid two">
         <div className="field">
@@ -209,6 +389,7 @@ function AssessmentWizard({ onSubmit, onReset, loading }: Props) {
           className="button secondary"
           type="button"
           onClick={() => {
+            setTemplateId('operational');
             setForm(defaultForm);
             onReset?.();
           }}
