@@ -6,11 +6,12 @@ import {
   Mode,
   PromptTemplateDetail,
   PromptTemplateSummary,
+  RiskRequest,
   testRunAdminPromptTemplate,
   updateAdminPromptTemplate,
 } from '../../services/api';
 
-const samplePayload = {
+const samplePayload: RiskRequest = {
   business_type: 'Retail banking',
   risk_domain: 'Operational',
   scope: 'Digital onboarding channel (public demo)',
@@ -301,4 +302,3 @@ function PromptTemplatesManager({ llmModels }: Props) {
 }
 
 export default PromptTemplatesManager;
-
