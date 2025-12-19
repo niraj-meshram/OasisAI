@@ -6,6 +6,7 @@ type Props = {
   onLogin?: () => void;
   onLogout?: () => void;
   userName?: string;
+  roles?: string[];
 };
 
 function Header({
@@ -16,6 +17,7 @@ function Header({
   onLogin,
   onLogout,
   userName,
+  roles,
 }: Props) {
   return (
     <header className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -32,6 +34,7 @@ function Header({
           </button>
         )}
         {userName && <div className="pill">Signed in as {userName}</div>}
+        {roles && roles.length > 0 && <div className="pill">Roles: {roles.join(', ')}</div>}
         {!isAuthenticated && onLogin && (
           <button className="button secondary pill" type="button" onClick={onLogin}>
             Log in

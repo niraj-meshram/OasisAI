@@ -12,6 +12,7 @@ type Props = {
   onLogout?: () => void;
   isAuthenticated?: boolean;
   userName?: string;
+  roles?: string[];
   error?: string | null;
   onDismissError?: () => void;
 };
@@ -30,6 +31,7 @@ function Landing({
   onLogout,
   isAuthenticated,
   userName,
+  roles,
   error,
   onDismissError,
 }: Props) {
@@ -51,6 +53,7 @@ function Landing({
               <span className="logo-glyph" aria-hidden />
               <span className="logo-text">oasis.ai</span>
               {isAuthenticated && userName && <span className="pill">Signed in as {userName}</span>}
+              {isAuthenticated && roles && roles.length > 0 && <span className="pill">Roles: {roles.join(', ')}</span>}
             </div>
             <nav className="runway-nav" aria-label="Primary">
               <a className="rw-eyebrow" href="#research">
@@ -98,7 +101,7 @@ function Landing({
             </div>
           </div>
         </div>
-        <div className="card" style={{ width: 'min(1100px, 100%)' }}>
+        <div className="card ai-wizard-card" style={{ width: 'min(1280px, 100%)' }}>
           {error && (
             <div className="card" role="alert" style={{ padding: 12, boxShadow: 'none', marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
@@ -111,10 +114,9 @@ function Landing({
               </div>
             </div>
           )}
-          <h2 style={{ marginTop: 0 }}>Choose an area</h2>
-          <p className="muted" style={{ marginTop: 0 }}>
-            Your role controls what you can do. UI gating is for UX; backend RBAC is the security boundary.
-          </p>
+          <div className="ai-wizard-header">
+            <h2>🧙 AI Wizard 🪄</h2>
+          </div>
           <div className="bento-grid">
             <button className="bento-tile" type="button" onClick={onOpenAnalyst} disabled={!canAnalyst}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>

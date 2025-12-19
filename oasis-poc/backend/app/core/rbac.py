@@ -104,6 +104,12 @@ def _extract_roles(claims: dict[str, Any], settings: Settings) -> set[Role]:
                     role = _normalize_role(item)
                     if role:
                         roles.add(role)
+                elif isinstance(item, dict):
+                    name = item.get("name") or item.get("role") or item.get("value")
+                    if isinstance(name, str):
+                        role = _normalize_role(name)
+                        if role:
+                            roles.add(role)
             continue
         if isinstance(source, dict):
             for nested_key in ("roles", "groups", "permissions"):
@@ -119,6 +125,12 @@ def _extract_roles(claims: dict[str, Any], settings: Settings) -> set[Role]:
                             role = _normalize_role(item)
                             if role:
                                 roles.add(role)
+                        elif isinstance(item, dict):
+                            name = item.get("name") or item.get("role") or item.get("value")
+                            if isinstance(name, str):
+                                role = _normalize_role(name)
+                                if role:
+                                    roles.add(role)
             continue
     return roles
 

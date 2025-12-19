@@ -121,7 +121,11 @@ function AppShell({ auth }: AppShellProps) {
   }, [Array.from(roleSet).sort().join(',')]);
 
   useEffect(() => {
-    if (authError) setAuthProviderError(authError);
+    if (authError) {
+      setAuthProviderError(authError);
+    } else {
+      setAuthProviderError(null);
+    }
   }, [authError]);
 
   const handleLogin = () => {
@@ -912,6 +916,9 @@ function AppWithAuth0() {
   useEffect(() => {
     const extractedFromUser = rawUser ? extractRolesFromClaims(rawUser) : [];
     if (extractedFromUser.length > 0) {
+      if (import.meta.env.DEV) {
+        console.info('Auth0 roles extracted from user claims', extractedFromUser);
+      }
       setRoles(extractedFromUser);
       return;
     }
@@ -928,6 +935,9 @@ function AppWithAuth0() {
         const claims = decodeJwtPayload(token);
         const extracted = claims ? extractRolesFromClaims(claims) : [];
         if (extracted.length > 0) {
+          if (import.meta.env.DEV) {
+            console.info('Auth0 roles extracted from access token', extracted);
+          }
           setRoles(extracted);
           return;
         }

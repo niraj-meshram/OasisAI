@@ -331,7 +331,7 @@ button.bento-tile:hover:not(:disabled) {
 
 .landing-shell {
   position: relative;
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 48px 24px 88px;
   z-index: 2;
@@ -353,7 +353,7 @@ button.bento-tile:hover:not(:disabled) {
 }
 
 .runway-header {
-  width: min(1180px, 100%);
+  width: min(1280px, 100%);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -637,6 +637,28 @@ button.bento-tile:hover:not(:disabled) {
   background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
   z-index: 1;
   pointer-events: none;
+}
+
+.ai-wizard-card {
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle at top left, rgba(59, 130, 246, 0.25), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.2), transparent 40%),
+    rgba(10, 14, 24, 0.95);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+  padding: 32px;
+  margin-top: 48px;
+}
+
+.ai-wizard-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.ai-wizard-header h2 {
+  margin: 0;
+  font-size: 32px;
+  color: #f8fafc;
 }
 
 .orb {
