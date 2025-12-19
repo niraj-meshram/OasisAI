@@ -647,6 +647,7 @@ button.bento-tile:hover:not(:disabled) {
     rgba(10, 14, 24, 0.95);
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
   padding: 32px;
+  margin-top: 48px;
 }
 
 .ai-wizard-header {
