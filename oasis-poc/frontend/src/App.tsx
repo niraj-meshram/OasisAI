@@ -432,8 +432,32 @@ function AppShell({ auth }: AppShellProps) {
     setLoading(true);
     setError(null);
     try {
-      if (!selectedProjectId) {
+      let projectId = selectedProjectId ?? projects[0]?.project_id ?? null;
+      if (!projectId) {
+        const latestProjects = await withAuth(() => listProjects());
+        if (latestProjects.length > 0) {
+          setProjects(latestProjects);
+          projectId = latestProjects[0].project_id;
+        }
+      }
+      if (!projectId && canCreateProject) {
+        const createdProject = await withAuth(() =>
+          createProject({
+            name: 'Default Project',
+            description: 'Persisted PoC workspace (public data only).',
+          }),
+        );
+        setProjects((prev) => {
+          const exists = prev.some((p) => p.project_id === createdProject.project_id);
+          return exists ? prev : [...prev, createdProject];
+        });
+        projectId = createdProject.project_id;
+      }
+      if (!projectId) {
         throw new Error('No project selected.');
+      }
+      if (!selectedProjectId) {
+        setSelectedProjectId(projectId);
       }
       if (!canRunAssessment) {
         throw new Error('Your role cannot generate assessments.');
@@ -446,7 +470,7 @@ function AppShell({ auth }: AppShellProps) {
         }
         const derivedTitle = `${payload.risk_domain}: ${payload.business_type}`.slice(0, 200);
         const created = await withAuth(() =>
-          createAssessment(selectedProjectId, {
+          createAssessment(projectId, {
             title: derivedTitle,
             template_id: templateId,
             payload,
@@ -471,7 +495,7 @@ function AppShell({ auth }: AppShellProps) {
       setSelectedVersionId(version.version_id);
 
       const [updatedAssessments, updatedVersions] = await Promise.all([
-        withAuth(() => listAssessments(selectedProjectId)),
+        withAuth(() => listAssessments(projectId)),
         withAuth(() => listAssessmentVersions(assessmentId)),
       ]);
       setAssessments(updatedAssessments);

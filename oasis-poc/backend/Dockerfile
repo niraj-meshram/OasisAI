@@ -1,16 +1,23 @@
 FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_CERT=/usr/local/share/ca-certificates/zscaler-root.crt \
+    SSL_CERT_FILE=/usr/local/share/ca-certificates/zscaler-root.crt \
+    REQUESTS_CA_BUNDLE=/usr/local/share/ca-certificates/zscaler-root.crt
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential && rm -rf /var/lib/apt/lists/*
+COPY certs/zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates build-essential && \
+    rm -rf /var/lib/apt/lists/* && \
+    update-ca-certificates
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --cert $PIP_CERT -r requirements.txt
 
-COPY app /app/app
+COPY backend/app /app/app
 
 EXPOSE 8000
 

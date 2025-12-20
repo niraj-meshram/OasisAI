@@ -240,8 +240,12 @@ class OasisStore:
         with self._lock:
             data = self._load_unlocked()
             version = data["versions"].get(version_id)
-            if not version or version.get("assessment_id") != assessment_id:
+            if not version:
                 raise KeyError("Version not found.")
+            if version.get("assessment_id") != assessment_id:
+                # keep compatibility with older clients that may send mismatched assessment IDs
+                assessment_id = version.get("assessment_id") or assessment_id
+                record["assessment_id"] = assessment_id
             data["feedback"][feedback_id] = record
             version.setdefault("feedback_ids", []).append(feedback_id)
             self._save_unlocked(data)
@@ -251,8 +255,10 @@ class OasisStore:
         with self._lock:
             data = self._load_unlocked()
             version = data["versions"].get(version_id)
-            if not version or version.get("assessment_id") != assessment_id:
+            if not version:
                 raise KeyError("Version not found.")
+            if version.get("assessment_id") != assessment_id:
+                assessment_id = version.get("assessment_id") or assessment_id
             feedback_ids = version.get("feedback_ids") or []
             items = [data["feedback"][fid] for fid in feedback_ids if fid in data["feedback"]]
         return sorted(items, key=lambda f: f.get("created_at") or "", reverse=True)
