@@ -1,24 +1,31 @@
+ARG CUSTOM_CA_CERT=""
+
 ##############################
 # Frontend build stage
 ##############################
 FROM node:20-slim AS build
+ARG CUSTOM_CA_CERT
 
 ENV NODE_ENV=production \
-    NPM_CONFIG_PRODUCTION=false
+    NPM_CONFIG_PRODUCTION=false \
+    CUSTOM_CA_PATH=/usr/local/share/ca-certificates/custom-ca.crt
 
 WORKDIR /app
 
-# Install CA root if present (useful for corp proxies)
-COPY certs/zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    update-ca-certificates
+    if [ -n "$CUSTOM_CA_CERT" ]; then \
+        printf '%s\n' "$CUSTOM_CA_CERT" > "$CUSTOM_CA_PATH" && \
+        update-ca-certificates && \
+        npm config set cafile "$CUSTOM_CA_PATH"; \
+    else \
+        update-ca-certificates; \
+    fi
 
 # Install dependencies
 COPY frontend/package*.json ./
-RUN npm config set cafile /usr/local/share/ca-certificates/zscaler-root.crt && \
-    npm ci --include=dev
+RUN npm ci --include=dev
 
 # Copy source
 COPY frontend ./
@@ -42,18 +49,24 @@ RUN npm run build
 # Runtime image
 ##############################
 FROM node:20-slim AS runtime
+ARG CUSTOM_CA_CERT
 
 ENV NODE_ENV=production \
-    PORT=8080
+    PORT=8080 \
+    CUSTOM_CA_PATH=/usr/local/share/ca-certificates/custom-ca.crt
 
 WORKDIR /app
 
-COPY certs/zscaler-root.crt /usr/local/share/ca-certificates/zscaler-root.crt
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/* && \
-    update-ca-certificates && \
-    npm config set cafile /usr/local/share/ca-certificates/zscaler-root.crt && \
+    if [ -n "$CUSTOM_CA_CERT" ]; then \
+        printf '%s\n' "$CUSTOM_CA_CERT" > "$CUSTOM_CA_PATH" && \
+        update-ca-certificates && \
+        npm config set cafile "$CUSTOM_CA_PATH"; \
+    else \
+        update-ca-certificates; \
+    fi && \
     npm install -g serve && \
     npm config delete cafile
 
