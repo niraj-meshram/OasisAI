@@ -193,8 +193,14 @@ def get_version(
     _: UserPrincipal = Depends(require_roles("analyst", "reviewer")),
 ) -> AssessmentVersion:
     record = store.get_version(version_id)
-    if not record or record.get("assessment_id") != assessment_id:
+    if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version not found.")
+    if record.get("assessment_id") != assessment_id:
+        logger.warning(
+            "version lookup received mismatched assessment_id (got %s, expected %s)",
+            assessment_id,
+            record.get("assessment_id"),
+        )
     return AssessmentVersion.model_validate(record)
 
 

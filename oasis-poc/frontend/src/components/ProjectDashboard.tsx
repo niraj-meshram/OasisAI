@@ -48,18 +48,21 @@ function ProjectDashboard({
           <label htmlFor="projectSelect">Project</label>
           <select
             id="projectSelect"
-            value={selectedProjectId || ''}
+            value={selectedProjectId ?? ''}
             onChange={(e) => onSelectProject(e.target.value)}
             disabled={loading || projectOptions.length === 0}
           >
             {projectOptions.length === 0 ? (
               <option value="">No projects</option>
             ) : (
-              projectOptions.map((p) => (
-                <option key={p.project_id} value={p.project_id}>
-                  {p.name}
-                </option>
-              ))
+              <>
+                {!selectedProjectId && <option value="">Select a project</option>}
+                {projectOptions.map((p) => (
+                  <option key={p.project_id} value={p.project_id}>
+                    {p.name}
+                  </option>
+                ))}
+              </>
             )}
           </select>
           {selectedProject?.description && (
@@ -103,7 +106,7 @@ function ProjectDashboard({
                 >
                   <span style={{ textAlign: 'left' }}>{a.title}</span>
                   <span className="pill" style={{ whiteSpace: 'nowrap' }}>
-                    {subtitleParts.join(' · ')}
+                    {subtitleParts.join(' | ')}
                   </span>
                 </button>
               );
@@ -122,13 +125,13 @@ function ProjectDashboard({
             >
               {versions.map((v) => (
                 <option key={v.version_id} value={v.version_id}>
-                  v{v.version_number} · {v.resolved_mode} · {v.llm_model}
+                  v{v.version_number} | {v.resolved_mode} | {v.llm_model}
                 </option>
               ))}
             </select>
             {selectedVersion && (
               <p className="muted" style={{ margin: 0 }}>
-                Trace {selectedVersion.trace_id} · Prompt {selectedVersion.prompt_variant} ·{' '}
+                Trace {selectedVersion.trace_id} | Prompt {selectedVersion.prompt_variant} |{' '}
                 {new Date(selectedVersion.created_at).toLocaleString()}
               </p>
             )}
