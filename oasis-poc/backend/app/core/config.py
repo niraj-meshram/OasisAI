@@ -1,5 +1,7 @@
 import json
 from functools import lru_cache
+from pathlib import Path
+from tempfile import gettempdir
 from typing import Literal, Optional
 
 from pydantic import Field, field_validator
@@ -14,7 +16,10 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     openai_api_key: Optional[str] = Field(default=None, validation_alias="OPENAI_API_KEY")
     app_api_key: Optional[str] = Field(default=None, validation_alias="APP_API_KEY")
-    store_path: str = Field(default="oasis_store.json", validation_alias="OASIS_STORE_PATH")
+    store_path: str = Field(
+        default=str(Path(gettempdir()) / "oasis_store.json"),
+        validation_alias="OASIS_STORE_PATH",
+    )
 
     auth_mode: Literal["disabled", "api_key", "jwt"] = Field(default="disabled", validation_alias="OASIS_AUTH_MODE")
     default_roles: list[str] = Field(default_factory=lambda: ["analyst"], validation_alias="OASIS_DEFAULT_ROLES")
@@ -24,6 +29,9 @@ class Settings(BaseSettings):
     jwt_jwks_url: Optional[str] = Field(default=None, validation_alias="OASIS_JWT_JWKS_URL")
     jwt_roles_claim: Optional[str] = Field(default=None, validation_alias="OASIS_JWT_ROLES_CLAIM")
     allowed_origins: list[str] = Field(default_factory=lambda: ["*"])
+    cors_allow_credentials: bool = Field(default=False, validation_alias="CORS_ALLOW_CREDENTIALS")
+    serve_frontend: bool = Field(default=True, validation_alias="SERVE_FRONTEND")
+    frontend_dist_path: Optional[str] = Field(default=None, validation_alias="FRONTEND_DIST_PATH")
 
     @field_validator("app_api_key", "openai_api_key", mode="before")
     @classmethod
@@ -94,6 +102,16 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @property
+    def resolved_frontend_dist_path(self) -> Path:
+        """
+        Determine where the built SPA assets live. Allows overriding so the backend can
+        avoid bundling the UI when a CDN serves it instead.
+        """
+        if self.frontend_dist_path:
+            return Path(self.frontend_dist_path)
+        return Path(__file__).resolve().parent.parent / "frontend_dist"
 
 
 @lru_cache

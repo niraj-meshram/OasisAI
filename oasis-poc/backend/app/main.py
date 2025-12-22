@@ -1,6 +1,4 @@
 import logging
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -14,10 +12,11 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title=settings.project_name, version="0.1.0")
 
-    allow_credentials = "*" not in settings.allowed_origins
-    if not allow_credentials and settings.allowed_origins != ["*"]:
+    allow_credentials = settings.cors_allow_credentials
+    if "*" in settings.allowed_origins and allow_credentials:
+        allow_credentials = False
         logging.getLogger(__name__).warning(
-            "CORS allow_credentials disabled because wildcard origin present: %s",
+            "CORS credentials disabled because wildcard origins are not allowed with credentials: %s",
             settings.allowed_origins,
         )
 
@@ -35,8 +34,8 @@ def create_app() -> FastAPI:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    dist_path = Path(__file__).resolve().parent.parent / "frontend_dist"
-    if dist_path.exists():
+    dist_path = settings.resolved_frontend_dist_path
+    if settings.serve_frontend and dist_path.exists():
         assets_dir = dist_path / "assets"
         if assets_dir.exists():
             app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
